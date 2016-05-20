@@ -3,10 +3,14 @@ u"""Identificador de tiro de arco e flecha."""
 
 import os
 import json
+from cStringIO import StringIO
 from flask import Flask, Blueprint, jsonify, request, render_template, send_file
 import cv2
+from redis import Redis
 import numpy
-from PIL import Image
+from PIL import Image, ImageMath, ImageEnhance
+
+DB = Redis(host="127.0.0.1", port=6379, db=0)
 
 IMAGE_DIR = "/Users/nano/Pictures/MPlayerX/"
 
@@ -38,7 +42,35 @@ app.secret_key = 's3cr3t'
 home = Blueprint('home', __name__)
 
 
-@home.route('/', methods=['GET'])
+@home.route('/<index>', methods=['GET'])
+def diferenca_view(index):
+    """Home."""
+    index = int(index)
+    pontos = json.loads(DB.get("pontos_perspectiva"))
+
+    b = Image.open(IMAGE_DIR + os.listdir(IMAGE_DIR)[index]).convert("L")
+    b = perspectiva(b, pontos, (594, 420))
+    # b.show()
+    a = Image.open(IMAGE_DIR + os.listdir(IMAGE_DIR)[index - 1]).convert("L")
+    a = perspectiva(a, pontos, (594, 420))
+    # a.show()
+    c = ImageMath.eval("a - b", a=a, b=b)
+    e = Image.new("RGB", c.size, 0)
+    f = e.load()
+    d = c.load()
+    for x in xrange(c.width):
+        for y in xrange(c.height):
+            cor = d[x, y]
+            f[x, y] = (0, 0, 0) if cor < 0 else (cor, cor, cor)
+    # e.show()
+    arquivo = StringIO()
+    e.save(arquivo, "png")
+    arquivo.seek(0)
+    response = send_file(arquivo, as_attachment=False, attachment_filename="diferenca.png")
+    return response
+
+
+@home.route('/setup', methods=['GET'])
 def home_view():
     """Home."""
     context = {}
@@ -59,10 +91,13 @@ def perspectiva_view():
     imagem = Image.open(IMAGE_DIR + os.listdir(IMAGE_DIR)[2])
     dados = json.loads(request.args['pontos'])
     dados = [(i["x"], i["y"]) for i in dados]
+    DB.set("pontos_perspectiva", json.dumps(dados))
     r = perspectiva(imagem, dados, (594, 420))
-    r.show()
-    return jsonify(dados), 200
-
+    arquivo = StringIO()
+    r.save(arquivo, "png")
+    arquivo.seek(0)
+    response = send_file(arquivo, as_attachment=False, attachment_filename="corrigida.png")
+    return response
 
 app.register_blueprint(home)
 

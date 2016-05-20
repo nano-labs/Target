@@ -17,6 +17,7 @@
 </head>
 <body>
 <img id="clicker" src="/frame">
+<img id="corrigida" src="">
 
 <script type="text/javascript">
 
@@ -36,16 +37,17 @@
             console.log(pontos)
             var ps = pontos;
             pontos = [];
-            $.ajax({ 
-                method: "GET",
-                url: "/perspectiva?pontos=" + JSON.stringify(ps),
-                success: function (response) {
-                    console.log(response);
-                },
-                error: function (response) {
-                    console.log(response);
-                }
-            });
+            $("#corrigida").attr("src", "/perspectiva?pontos=" + JSON.stringify(ps))
+            // $.ajax({ 
+            //     method: "GET",
+            //     url: "/perspectiva?pontos=" + JSON.stringify(ps),
+            //     success: function (response) {
+            //         console.log(response);
+            //     },
+            //     error: function (response) {
+            //         console.log(response);
+            //     }
+            // });
         }
     });
 </script>
