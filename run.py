@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -​*- coding: utf-8 -*​-
 u"""Identificador de tiro de arco e flecha."""
 
@@ -16,6 +17,22 @@ IMAGE_DIR = "/Users/nano/Pictures/MPlayerX/"
 
 
 tamanho = (400, 400)
+
+
+def diferenca(a, b):
+    pontos = json.loads(DB.get("pontos_perspectiva"))
+    a = a.convert("L")
+    b = b.convert("L")
+    # a.show()
+    c = ImageMath.eval("a - b", a=a, b=b)
+    e = Image.new("RGB", c.size, 0)
+    f = e.load()
+    d = c.load()
+    for x in xrange(c.width):
+        for y in xrange(c.height):
+            cor = d[x, y]
+            f[x, y] = (0, 0, 0) if cor < 0 else (cor, cor, cor)
+    return e
 
 
 def perspectiva(imagem, pontos, tamanho):
@@ -42,7 +59,7 @@ app.secret_key = 's3cr3t'
 home = Blueprint('home', __name__)
 
 
-@home.route('/<index>', methods=['GET'])
+@home.route('/diferenca/<index>', methods=['GET'])
 def diferenca_view(index):
     """Home."""
     index = int(index)
@@ -65,16 +82,69 @@ def diferenca_view(index):
     # e.show()
     arquivo = StringIO()
     e.save(arquivo, "png")
+    e.save("/Users/nano/Desktop/teste.png")
     arquivo.seek(0)
     response = send_file(arquivo, as_attachment=False, attachment_filename="diferenca.png")
     return response
 
 
-@home.route('/setup', methods=['GET'])
+@home.route('/', methods=['GET'])
 def home_view():
     """Home."""
     context = {}
     return render_template('home.html', **context), 200
+
+
+@home.route('/setup', methods=['GET', 'POST'])
+def setup_view():
+    """Setup do sistema."""
+    if request.method == "POST":
+        dados = request.json.get("pontos")
+        dados = [(i["x"], i["y"]) for i in dados]
+        DB.set("pontos_perspectiva", json.dumps(dados))
+        print dados
+    context = {}
+    return render_template('setup.html', **context), 200
+
+
+@home.route('/camera_feed', methods=['GET', 'POST'])
+def camera_feed():
+    """Recebe e serve o feed de frames"""
+    if request.method == "POST":
+        arquivo = request.files.get('file').stream.read()
+        DB.rpush("frames", arquivo)
+        DB.ltrim("frames", -3, -1)
+        return jsonify({"status": "ok"}), 200
+
+    else:
+        arquivo = StringIO()
+        arquivo.write(DB.lrange("frames", -2, -1)[0])
+        arquivo.seek(0)
+        if request.args.get("corrected"):
+            imagem = Image.open(arquivo)
+            dados = json.loads(DB.get("pontos_perspectiva"))
+            r = perspectiva(imagem, dados, (594, 420))
+            arquivo = StringIO()
+            r.save(arquivo, "png")
+            arquivo.seek(0)
+
+        elif request.args.get("difference"):
+            imagem = Image.open(arquivo)
+            dados = json.loads(DB.get("pontos_perspectiva"))
+            a = perspectiva(imagem, dados, (594, 420))
+
+            anterior = StringIO()
+            anterior.write(DB.lrange("frames", -3, -2)[0])
+            anterior.seek(0)
+            imagem = Image.open(anterior)
+            b = perspectiva(imagem, dados, (594, 420))
+
+            d = diferenca(b, a)
+            arquivo = StringIO()
+            d.save(arquivo, "png")
+            arquivo.seek(0)
+        f = send_file(arquivo, as_attachment=False, attachment_filename="bla.png")
+    return f
 
 
 @home.route('/frame', methods=['GET'])

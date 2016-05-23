@@ -16,40 +16,17 @@
     </style>
 </head>
 <body>
-<img id="clicker" src="/frame">
-<img id="corrigida" src="">
+<img id="frame" src="/camera_feed?corrected=true">
+<img id="diferenca" src="/camera_feed?difference=true">
 
 <script type="text/javascript">
 
-    var pontos = []
-
-    $('#clicker').click(function (e) {
-        var clicker_box = $(this);
-
-        var posX = clicker_box.offset().left;
-        var posY = clicker_box.offset().top;
-
-        var x = e.pageX - posX;
-        var y = e.pageY - posY;
-        console.log({"x": x, "y": y})
-        pontos.push({"x": x, "y": y})
-        if (pontos.length == 4) {
-            console.log(pontos)
-            var ps = pontos;
-            pontos = [];
-            $("#corrigida").attr("src", "/perspectiva?pontos=" + JSON.stringify(ps))
-            // $.ajax({ 
-            //     method: "GET",
-            //     url: "/perspectiva?pontos=" + JSON.stringify(ps),
-            //     success: function (response) {
-            //         console.log(response);
-            //     },
-            //     error: function (response) {
-            //         console.log(response);
-            //     }
-            // });
-        }
-    });
+    $(document).ready(function () {
+        setInterval(function(){ 
+            $("#frame").attr("src", "/camera_feed?corrected=true&time=" + (new Date).getTime())
+            $("#diferenca").attr("src", "/camera_feed?difference=true&time=" + (new Date).getTime())
+        }, 900)
+    })
 </script>
 
 </body>
