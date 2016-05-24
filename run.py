@@ -9,7 +9,7 @@ from flask import Flask, Blueprint, jsonify, request, render_template, send_file
 import cv2
 from redis import Redis
 import numpy
-from PIL import Image, ImageMath, ImageEnhance
+from PIL import Image, ImageMath, ImageEnhance, ImageOps
 
 DB = Redis(host="127.0.0.1", port=6379, db=0)
 
@@ -80,10 +80,78 @@ def diferenca_view(index):
             cor = d[x, y]
             f[x, y] = (0, 0, 0) if cor < 0 else (cor, cor, cor)
     # e.show()
+
     arquivo = StringIO()
+    e = ImageOps.invert(e)
     e.save(arquivo, "png")
     e.save("/Users/nano/Desktop/teste.png")
     arquivo.seek(0)
+
+    im = cv2.imread("/Users/nano/Desktop/teste.png")
+    gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    lines = cv2.HoughLinesP(edges, 1, numpy.pi/180, 150)
+    print lines[0]
+    for x1, y1, x2, y2 in lines[0]:
+        # a = numpy.cos(theta)
+        # b = numpy.sin(theta)
+        # x0 = a*rho
+        # y0 = b*rho
+        # x1 = int(x0 + 1000*(-b))
+        # y1 = int(y0 + 1000*(a))
+        # x2 = int(x0 - 1000*(-b))
+        # y2 = int(y0 - 1000*(a))
+
+        cv2.line(im, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
+    frame_string = im.tostring()
+    e = Image.frombytes('RGB', (im.shape[1], im.shape[0]), frame_string)
+
+    # # Create a detector with the parameters
+    # params = cv2.SimpleBlobDetector_Params()
+
+    # # Change thresholds
+    # params.minThreshold = 10
+    # # params.maxThreshold = 200
+
+    # # Filter by Area.
+    # params.filterByArea = True
+    # params.minArea = 150
+
+    # # Filter by Circularity
+    # params.filterByCircularity = True
+    # params.minCircularity = 0.1
+
+    # # Filter by Convexity
+    # params.filterByConvexity = True
+    # params.minConvexity = 0.87
+
+    # # Filter by Inertia
+    # params.filterByInertia = True
+    # params.minInertiaRatio = 0.01
+
+    # # Set up the detector with default parameters.
+    # # detector = cv2.SimpleBlobDetector()
+    # detector = cv2.SimpleBlobDetector(params)
+
+    # # Detect blobs.
+    # keypoints = detector.detect(im)
+    # print keypoints
+
+    # # Draw detected blobs as red circles.
+    # # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
+    # im_with_keypoints = cv2.drawKeypoints(im, keypoints, numpy.array([]), (0,255,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+    # frame_string = im_with_keypoints.tostring()
+    # e = Image.frombytes('RGB', (im_with_keypoints.shape[1], im_with_keypoints.shape[0]), frame_string)
+
+
+
+    arquivo = StringIO()
+    e.save(arquivo, "png")
+    arquivo.seek(0)
+
+
     response = send_file(arquivo, as_attachment=False, attachment_filename="diferenca.png")
     return response
 
