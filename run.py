@@ -9,7 +9,7 @@ from flask import Flask, Blueprint, jsonify, request, render_template, send_file
 import cv2
 from redis import Redis
 import numpy
-from PIL import Image, ImageMath, ImageEnhance, ImageOps
+from PIL import Image, ImageMath, ImageEnhance, ImageOps, ImageFilter
 
 DB = Redis(host="127.0.0.1", port=6379, db=0)
 
@@ -32,6 +32,13 @@ def diferenca(a, b):
         for y in xrange(c.height):
             cor = d[x, y]
             f[x, y] = (0, 0, 0) if cor < 0 else (cor, cor, cor)
+    e = ImageOps.invert(e)
+    e = e.filter(ImageFilter.BLUR)
+    enhancer = ImageEnhance.Brightness(e)
+    e = enhancer.enhance(2)
+    enhancer = ImageEnhance.Contrast(e)
+    e = enhancer.enhance(8)
+
     return e
 
 
@@ -83,6 +90,11 @@ def diferenca_view(index):
 
     arquivo = StringIO()
     e = ImageOps.invert(e)
+    e = e.filter(ImageFilter.BLUR)
+    enhancer = ImageEnhance.Brightness(e)
+    e = enhancer.enhance(2)
+    enhancer = ImageEnhance.Contrast(e)
+    e = enhancer.enhance(8)
     e.save(arquivo, "png")
     e.save("/Users/nano/Desktop/teste.png")
     arquivo.seek(0)
@@ -91,18 +103,18 @@ def diferenca_view(index):
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 50, 150, apertureSize=3)
     lines = cv2.HoughLinesP(edges, 1, numpy.pi/180, 150)
-    print lines[0]
-    for x1, y1, x2, y2 in lines[0]:
-        # a = numpy.cos(theta)
-        # b = numpy.sin(theta)
-        # x0 = a*rho
-        # y0 = b*rho
-        # x1 = int(x0 + 1000*(-b))
-        # y1 = int(y0 + 1000*(a))
-        # x2 = int(x0 - 1000*(-b))
-        # y2 = int(y0 - 1000*(a))
-
-        cv2.line(im, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    # for rho, theta in lines[0]:
+    #     a = numpy.cos(theta)
+    #     b = numpy.sin(theta)
+    #     x0 = a*rho
+    #     y0 = b*rho
+    #     x1 = int(x0 + 1000*(-b))
+    #     y1 = int(y0 + 1000*(a))
+    #     x2 = int(x0 - 1000*(-b))
+    #     y2 = int(y0 - 1000*(a))
+    if lines is not None:
+        for x1, y1, x2, y2 in lines[0]:
+            cv2.line(im, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
     frame_string = im.tostring()
     e = Image.frombytes('RGB', (im.shape[1], im.shape[0]), frame_string)
@@ -253,4 +265,4 @@ def rotas(error):
 if __name__ == '__main__':
     app.use_reloader = True
     app.debug = True
-    app.run(host="0.0.0.0", port=5000, threaded=True)
+    app.run(host="0.0.0.0", port=5001, threaded=True)

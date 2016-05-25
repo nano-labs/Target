@@ -12,12 +12,13 @@ cv = cv2.cv
 
 TIME_STEP = 2
 FRAME_RATE = 24
-SERVER_URL = "http://localhost:5000/camera_feed"
+SERVER_URL = "http://localhost:5001/camera_feed"
 
 
 def capture():
     u"""Captura continuamente frames da camera e joga no redis."""
-    vc = cv2.VideoCapture('/Users/nano/Desktop/p2.m4v')
+    # vc = cv2.VideoCapture('/Users/nano/Desktop/p2.m4v')
+    vc = cv2.VideoCapture('/Users/nano/Desktop/MVI_5513.MOV')
 
     # vc = cv2.VideoCapture(0)
     if vc.isOpened():  # try to get the first frame
