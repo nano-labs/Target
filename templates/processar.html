@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera</title>
+    <script type="application/javascript" src="{{url_for('static', filename='jquery-2.1.4.js')}}"></script>
+    <style type="text/css">
+        body {
+            background-color: #111111;
+            text-align: center;
+            color: #CCCCCC;
+        }
+        h1 {
+            padding-top: 0px;
+        }
+
+    </style>
+</head>
+<body>
+<img id="clicker" src="/frame?index={{imagem}}">
+<a href="/processar/{{previous}}?step=1">Anterior</a> - 
+<a href="/processar/{{imagem}}?step=3">Processar</a> - 
+<a href="/processar/{{next}}?step=1">Proximo</a>
+
+<script type="text/javascript">
+
+    var pontos = []
+
+    $('#clicker').click(function (e) {
+        var clicker_box = $(this);
+
+        var posX = clicker_box.offset().left;
+        var posY = clicker_box.offset().top;
+
+        var x = e.pageX - posX;
+        var y = e.pageY - posY;
+        console.log({"x": x, "y": y})
+        pontos.push({"x": x, "y": y})
+        if (pontos.length == 4) {
+            console.log(pontos)
+            var ps = pontos;
+            pontos = [];
+            $.ajax({ 
+                method: "GET",
+                contentType: "application/json",
+                url: "/processar/{{imagem}}?step=2&pontos=" + JSON.stringify({"pontos": ps}),
+                success: function (response) {
+                    window.location="/processar/{{imagem}}?step=3"; 
+                },
+                error: function (response) {
+                    console.log(response);
+                }
+            });
+        }
+    });
+    // $(document).ready(function () {
+    //     setInterval(function(){ 
+    //         $("#clicker").attr("src", "/camera_feed?time=" + (new Date).getTime())
+    //         $("#corrigida").attr("src", "/camera_feed?corrected=true&time=" + (new Date).getTime())
+    //     }, 2000)
+    // })
+</script>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera</title>
+    <script type="application/javascript" src="{{url_for('static', filename='jquery-2.1.4.js')}}"></script>
+    <style type="text/css">
+        body {
+            background-color: #111111;
+            text-align: center;
+            color: #CCCCCC;
+        }
+        h1 {
+            padding-top: 0px;
+        }
+
+    </style>
+</head>
+<body>
+<img id="clicker" width="594" heigth="420" src="/frame?index={{imagem}}">
+<img id="clicker" src="/diferenca/{{imagem}}"><br>
+<a href="/processar/{{previous}}?step=3">Anterior</a> - 
+<a href="/processar/{{imagem}}?step=1">Remapear</a> - 
+<a href="/processar/{{next}}?step=3">Proximo</a>
+
+<script type="text/javascript">
+</script>
+
+</body>
+</html>

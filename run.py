@@ -13,8 +13,7 @@ from PIL import Image, ImageMath, ImageEnhance, ImageOps, ImageFilter
 
 DB = Redis(host="127.0.0.1", port=6379, db=0)
 
-IMAGE_DIR = "/Users/nano/Pictures/MPlayerX/"
-
+IMAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "./examples/")
 
 tamanho = (400, 400)
 
@@ -64,6 +63,28 @@ app = Flask(__name__)
 app.secret_key = 's3cr3t'
 
 home = Blueprint('home', __name__)
+
+
+@home.route('/processar/<index>', methods=['GET'])
+def processaro_view(index):
+    index = int(index)
+    step = int(request.args.get("step", "1"))
+    context = {"step": step, "imagem": index, "next": index + 1, "previous": index - 1}
+    if step == 1:
+        return render_template('processar.html', **context), 200
+
+    elif step == 2:
+        dados = json.loads(request.args.get("pontos"))["pontos"]
+        print dados
+        dados = [(i["x"], i["y"]) for i in dados]
+        DB.set("pontos_perspectiva", json.dumps(dados))
+        return jsonify({"dados": dados})
+    elif step == 3:
+                
+        return render_template('processando.html', **context), 200
+
+
+        
 
 
 @home.route('/diferenca/<index>', methods=['GET'])
@@ -230,7 +251,8 @@ def camera_feed():
 @home.route('/frame', methods=['GET'])
 def frame_view():
     """Home."""
-    arquivo = open(IMAGE_DIR + os.listdir(IMAGE_DIR)[2], "ro")
+    index = int(request.args.get("index", "2"))
+    arquivo = open(IMAGE_DIR + os.listdir(IMAGE_DIR)[index], "ro")
     f = send_file(arquivo, as_attachment=False, attachment_filename="bla.png")
     return f
 
