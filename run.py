@@ -10,6 +10,7 @@ import cv2
 from redis import Redis
 import numpy
 from PIL import Image, ImageMath, ImageEnhance, ImageOps, ImageFilter
+from datetime import datetime
 
 DB = Redis(host="127.0.0.1", port=6379, db=0)
 
@@ -69,7 +70,8 @@ home = Blueprint('home', __name__)
 def processaro_view(index):
     index = int(index)
     step = int(request.args.get("step", "1"))
-    context = {"step": step, "imagem": index, "next": index + 1, "previous": index - 1}
+    context = {"step": step, "imagem": index, "next": index + 1,
+               "previous": index - 1, "timestamp": datetime.now().strftime("%s")}
     if step == 1:
         return render_template('processar.html', **context), 200
 
@@ -123,62 +125,85 @@ def diferenca_view(index):
     im = cv2.imread("/Users/nano/Desktop/teste.png")
     gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-    lines = cv2.HoughLinesP(edges, 1, numpy.pi/180, 150)
-    # for rho, theta in lines[0]:
-    #     a = numpy.cos(theta)
-    #     b = numpy.sin(theta)
-    #     x0 = a*rho
-    #     y0 = b*rho
-    #     x1 = int(x0 + 1000*(-b))
-    #     y1 = int(y0 + 1000*(a))
-    #     x2 = int(x0 - 1000*(-b))
-    #     y2 = int(y0 - 1000*(a))
+    lines = cv2.HoughLines(edges, 1, numpy.pi/180, 150)
+    # lines = cv2.HoughLinesP(edges, 1, numpy.pi/180, 150)
     if lines is not None:
-        for x1, y1, x2, y2 in lines[0]:
+        for rho, theta in lines[0]:
+            a = numpy.cos(theta)
+            b = numpy.sin(theta)
+            x0 = a*rho
+            y0 = b*rho
+            x1 = int(x0 + 1000*(-b))
+            y1 = int(y0 + 1000*(a))
+            x2 = int(x0 - 1000*(-b))
+            y2 = int(y0 - 1000*(a))
             cv2.line(im, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    # if lines is not None:
+    #     for x1, y1, x2, y2 in lines[0]:
+    #         cv2.line(im, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
-    frame_string = im.tostring()
-    e = Image.frombytes('RGB', (im.shape[1], im.shape[0]), frame_string)
+    # frame_string = im.tostring()
+    # e = Image.frombytes('RGB', (im.shape[1], im.shape[0]), frame_string)
 
     # # Create a detector with the parameters
-    # params = cv2.SimpleBlobDetector_Params()
+    params = cv2.SimpleBlobDetector_Params()
 
     # # Change thresholds
     # params.minThreshold = 10
-    # # params.maxThreshold = 200
+    # params.maxThreshold = 200
 
     # # Filter by Area.
-    # params.filterByArea = True
-    # params.minArea = 150
+    params.filterByArea = True
+    params.maxArea = 400
 
     # # Filter by Circularity
-    # params.filterByCircularity = True
-    # params.minCircularity = 0.1
+    params.filterByCircularity = True
+    params.minCircularity = 0.1
 
     # # Filter by Convexity
-    # params.filterByConvexity = True
-    # params.minConvexity = 0.87
+    params.filterByConvexity = True
+    params.minConvexity = 0.1
 
     # # Filter by Inertia
-    # params.filterByInertia = True
-    # params.minInertiaRatio = 0.01
+    params.filterByInertia = True
+    params.minInertiaRatio = 0.01
 
     # # Set up the detector with default parameters.
-    # # detector = cv2.SimpleBlobDetector()
-    # detector = cv2.SimpleBlobDetector(params)
+    # detector = cv2.SimpleBlobDetector()
+    detector = cv2.SimpleBlobDetector(params)
 
     # # Detect blobs.
-    # keypoints = detector.detect(im)
+    keypoints = detector.detect(im)
     # print keypoints
 
     # # Draw detected blobs as red circles.
-    # # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
-    # im_with_keypoints = cv2.drawKeypoints(im, keypoints, numpy.array([]), (0,255,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
+    im = cv2.drawKeypoints(im, keypoints, numpy.array([]), (0,255,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
     # frame_string = im_with_keypoints.tostring()
     # e = Image.frombytes('RGB', (im_with_keypoints.shape[1], im_with_keypoints.shape[0]), frame_string)
 
 
+    ret, thresh = cv2.threshold(gray, 127, 255, 0)
+    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # cv2.drawContours(im, contours, -1, (0,255,0), 3)
+
+    cores = [(255, 0, 0),  # vermelho
+             (0, 255, 0),  # verde
+             (0, 0, 255),
+             (127, 0, 0),
+             (0, 127, 0),
+             (0, 0, 127),
+             (255, 255, 0),
+             (0, 255, 255),
+             (255, 0, 255)]
+
+    for i in range(len(contours))[1:]:
+        cnt = contours[i]
+        cv2.drawContours(im, [cnt], 0, (255, 255, 255), cv2.cv.CV_FILLED)
+
+    frame_string = im.tostring()
+    e = Image.frombytes('RGB', (im.shape[1], im.shape[0]), frame_string)
 
     arquivo = StringIO()
     e.save(arquivo, "png")
@@ -257,10 +282,25 @@ def frame_view():
     return f
 
 
+@home.route('/get_perspectiva', methods=['GET'])
+def get_perspectiva_view():
+    """Home."""
+    index = int(request.args.get("index", "2"))
+    imagem = Image.open(IMAGE_DIR + os.listdir(IMAGE_DIR)[index])
+    dados = json.loads(DB.get("pontos_perspectiva"))
+    r = perspectiva(imagem, dados, (594, 420))
+    arquivo = StringIO()
+    r.save(arquivo, "png")
+    arquivo.seek(0)
+    response = send_file(arquivo, as_attachment=False, attachment_filename="corrigida.png")
+    return response
+
+
 @home.route('/perspectiva', methods=['GET'])
 def perspectiva_view():
     """Home."""
-    imagem = Image.open(IMAGE_DIR + os.listdir(IMAGE_DIR)[2])
+    index = int(request.args.get("index", "2"))
+    imagem = Image.open(IMAGE_DIR + os.listdir(IMAGE_DIR)[index])
     dados = json.loads(request.args['pontos'])
     dados = [(i["x"], i["y"]) for i in dados]
     DB.set("pontos_perspectiva", json.dumps(dados))
